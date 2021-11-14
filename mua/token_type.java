@@ -1,0 +1,5 @@
+package mua;
+
+public enum token_type {
+    KEYWORD,OPERATOR,BOOL,NUMBER,VALUE,LITERAL,UNKNOWN,NAME,WORD,IDENTIFIER,LIST
+}
