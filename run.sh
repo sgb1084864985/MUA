@@ -1,1 +1,1 @@
-java -cp .:mua/src O
+java -cp bin mua/Main
