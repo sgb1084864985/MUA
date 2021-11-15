@@ -1,1 +1,1 @@
-java -cp bin mua/Main
+cat ./in | java -cp bin mua/Main
