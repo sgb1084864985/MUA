@@ -54,27 +54,10 @@ public interface operator{
 class operator_make implements operator{
     @Override
     public value operate(token_stream paras,StackedNameSpace name_sets)throws mua_except{
-        if(!paras.has_next()){
-            throw new muaParametersMissing();
-        }
-
-        token t=paras.nextToken();
-        value val=paras.toValue(t, name_sets);
-        if(!(val instanceof value_word)){
-            throw new muaTokenTypeMissMatch("WORD");
-        }
-        else{
-            value_word name=(value_word)val;
-            if(!paras.has_next()){
-                throw new muaParametersMissing();
-            }
-            t=paras.nextToken();
-            val=paras.toValue(t, name_sets);
-            if(val instanceof value_void){
-                throw new muaTokenTypeMissMatch();
-            }
-            name_sets.put(name.val,val);
-        }
+        ArrayList<value> value_list=operator.getValues(paras, name_sets, List.of(value_type.WORD,value_type.ALL_TYPE));
+        value_word name = (value_word) value_list.get(0);
+        value val=value_list.get(1);
+        name_sets.put(name.val, val);
         return val;
     }
 
@@ -99,16 +82,7 @@ class operator_read implements operator{
 class operator_print implements operator{
     @Override
     public value operate(token_stream paras,StackedNameSpace name_sets)throws mua_except {
-        if(!paras.has_next()){
-            throw new muaParametersMissing();
-        }
-
-        token t=paras.nextToken();
-        value val=paras.toValue(t, name_sets);
-        if(val instanceof value_void){
-            throw new muaParametersMissing();
-        }
-
+        value val = operator.getOneValue(paras, name_sets, List.of(value_type.ALL_TYPE));
         System.out.println(val);
         return val;
     }
@@ -121,15 +95,7 @@ class operator_print implements operator{
 class operator_thing implements operator{
     @Override
     public value operate(token_stream paras,StackedNameSpace name_sets)throws mua_except {
-        if(!paras.has_next()){
-            throw new muaParametersMissing();
-        }
-
-        token t=paras.nextToken();
-        value val=paras.toValue(t, name_sets);
-        if(!(val instanceof value_word)){
-            throw new muaTokenTypeMissMatch("WORD");
-        }
+        value val = operator.getOneValue(paras, name_sets, List.of(value_type.WORD));
 
         value_word name=(value_word)val;
 
@@ -223,17 +189,28 @@ class operator_colon implements operator{
 class operator_start_list implements operator{
     @Override
     public value operate(token_stream paras, StackedNameSpace name_sets)throws mua_except {
+        return operate(paras, name_sets, true);
+    }
+
+    public value operate(token_stream paras, StackedNameSpace name_sets, boolean bindEnv)throws mua_except {
         token t;
         value_list list = new value_list();
+
+        
+        // if(bindEnv){
+        //     list.env=name_sets.cloneSubSpaces(1);
+        // }
+
+
         while(paras.has_next()){
             t=paras.nextTokenInList();
             switch(t.getType()){
                 case WORD: 
                     list.add(paras.toValue(t, name_sets));
                     break;
-                case OPERATOR:
+                case OPERATOR: // only case of '[' & ']'
                     if(t.getValue().equals("[")){
-                        list.add(paras.toValue(t, name_sets));
+                        list.add(operate(paras, name_sets, false));
                     }
                     else return list;
                 default: break;
@@ -241,6 +218,7 @@ class operator_start_list implements operator{
         }
         throw new muaParametersMissing();
     }
+
     @Override
     public value_type getReturnType() {
         return value_type.LIST;
@@ -292,9 +270,9 @@ class operator_run implements operator{
         StackedNameSpace namespace = new StackedNameSpace();
         namespace.addSpace(name_sets.getFirstSpace());
         namespace.addSpace(name_sets.getLastSpace());
-        if(fun.env!=null){
-            namespace.addSpaces(fun.env);
-        }
+        // if(fun.env!=null){
+        //     namespace.addSpaces(fun.env);
+        // }
         namespace.addEmptySpace();
 
         value_list 

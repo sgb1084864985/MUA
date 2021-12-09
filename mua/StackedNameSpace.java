@@ -33,6 +33,42 @@ public class StackedNameSpace implements NameSpace{
         other.namespaces.add(new HashMap<>());
         return other;
     }
+    public StackedNameSpace cloneSubSpaces(int start){
+        return cloneSubSpaces(start, namespaces.size());
+    }
+
+
+    // end not included
+    public StackedNameSpace cloneSubSpaces(int start,int end){
+        StackedNameSpace ret = new StackedNameSpace();
+        Iterator<HashMap<String,value>> it=namespaces.iterator();
+        while(it.hasNext()){
+            ret.namespaces.add(it.next());
+        }
+        for(int i=0;it.hasNext() && i<end;i++){
+            HashMap<String,value> tmp=it.next();
+            if(i>=start){
+                ret.namespaces.add(tmp);
+            }
+        }
+        return ret;
+    }
+
+    public StackedNameSpace cloneSubSpacesReverse(int start,int end){
+        StackedNameSpace ret = new StackedNameSpace();
+        Iterator<HashMap<String,value>> it=namespaces.descendingIterator();
+        while(it.hasNext()){
+            ret.namespaces.add(it.next());
+        }
+        for(int i=namespaces.size()-1;it.hasNext() && i>=start;i--){
+            HashMap<String,value> tmp=it.next();
+            if(i<end){
+                ret.namespaces.add(tmp);
+            }
+        }
+        return ret;
+    }
+
 
     public StackedNameSpace limitedCloneWithNewSpace(){
         StackedNameSpace other = new StackedNameSpace();

@@ -53,7 +53,6 @@ class value_word extends value implements Comparable<value_word>{
     String val;
     @Override
     public String toString() {
-        // TODO: process escape
         return val;
     }
 
