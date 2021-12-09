@@ -32,6 +32,12 @@ public class token {
         return type;
     }
 
+    public boolean isList(){
+        return 
+            (type==token_type.LIST)||
+            (type==token_type.OPERATOR)&&(value.matches("\\["));
+    }
+
     static token_type analysis(String identifier){
         if(opt_pool.match(identifier)) return token_type.OPERATOR;
         else if(identifier.matches("true|false")) return token_type.BOOL;

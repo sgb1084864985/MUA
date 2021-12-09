@@ -19,6 +19,12 @@ public interface operator{
         token t = paras.nextToken();
         value val=paras.toValue(t, name_sets);
 
+        if(t.isList()){
+            val=val.lightClone();
+            value_list vList=(value_list)val;
+            vList.env=name_sets;
+        }
+
         if(types_wanted.get(0)==value_type.ALL_TYPE){
             return val;
         }
@@ -268,11 +274,11 @@ class operator_run implements operator{
 
     static public value runFunctions(value_list fun,token_stream paras,StackedNameSpace name_sets) throws mua_except{
         StackedNameSpace namespace = new StackedNameSpace();
-        namespace.addSpace(name_sets.getFirstSpace());
-        namespace.addSpace(name_sets.getLastSpace());
-        // if(fun.env!=null){
-        //     namespace.addSpaces(fun.env);
-        // }
+        // namespace.addSpace(name_sets.getFirstSpace());
+        // namespace.addSpace(name_sets.getLastSpace());
+        if(fun.env!=null){
+            namespace.addSpaces(fun.env);
+        }
         namespace.addEmptySpace();
 
         value_list 

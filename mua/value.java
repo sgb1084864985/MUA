@@ -6,6 +6,7 @@ import java.util.Iterator;
 public abstract class value{
     protected abstract void setValue(String val);
     public abstract value_type getValueType();
+    public abstract value lightClone();
 }
 
 class value_void extends value{
@@ -20,6 +21,11 @@ class value_void extends value{
     @Override
     protected void setValue(String val) {
         
+    }
+    @Override
+    public value lightClone() {
+        // TODO Auto-generated method stub
+        return this;
     }
 }
 
@@ -46,6 +52,10 @@ class value_number extends value implements Comparable<value_number>{
     @Override
     public int compareTo(value_number o) {
         return ((Double)val).compareTo((Double)(o.val));
+    }
+    @Override
+    public value lightClone() {
+        return new value_number(val);
     }
 }
 
@@ -84,6 +94,10 @@ class value_word extends value implements Comparable<value_word>{
     public int compareTo(value_word o) {
         return val.compareTo(o.val);
     }
+    @Override
+    public value lightClone() {
+        return new value_word(val);
+    }
 }
 
 class value_bool extends value{
@@ -109,11 +123,23 @@ class value_bool extends value{
     value_bool(boolean val){
         this.val=val;
     }
+    @Override
+    public value lightClone() {
+        return new value_bool(val);
+    }
 }
 
 class value_list extends value implements Iterable<value>{
     ArrayList<value> elements = new ArrayList<>();
     StackedNameSpace env=null;
+
+    @Override
+    public value lightClone() {
+        value_list v =new value_list();
+        v.elements=elements;
+        v.env=env;
+        return v;
+    }
 
     public void add(value v){
         elements.add(v);
