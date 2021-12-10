@@ -54,6 +54,12 @@ public interface operator{
         }
         return values;
     }
+
+    default public void checkValueType(value v,value_type t)throws mua_except{
+        if((v.getValueType()!=t)){
+            throw new muaTokenTypeMissMatch(t.name());
+        }
+    }
 }
 
 
@@ -525,5 +531,61 @@ class operate_export implements operator{
     @Override
     public value_type getReturnType() {
         return value_type.ALL_TYPE;
+    }
+}
+
+class operate_readlist implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        value_list list = new value_list();
+        boolean start = false;
+        String str=null;
+        int bracketsStack=0;
+        while(commonInput.input.hasNext()){
+            str=commonInput.input.next();
+            if(!start){
+                if(str.charAt(0)!='['){
+                    throw new muaTokenTypeMissMatch("list");
+                }
+                start=true;
+
+                bracketsStack++;
+                if(str.length()==1) continue;
+                str=str.substring(1);
+            }
+            bracketsStack+=charCountsInString(str, '[');
+            bracketsStack-=charCountsInString(str, ']');
+            if(bracketsStack==0){
+                if(str.charAt(str.length()-1)!=']'){
+                    throw new muaTokenTypeMissMatch("list");
+                }
+                start=false;
+                if(str.length()>1){
+                    list.add(new value_word(str.substring(0, str.length()-1)));
+                }
+                break;
+            }
+            list.add(new value_word(str));
+        }
+        if(start==true){
+            throw new muaParametersMissing();
+        }
+        return list;
+    }
+
+    int charCountsInString(String str,char c){
+        int cnt=0;
+        for(int i=0;i<str.length();i++){
+            if(str.charAt(i)==c){
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+
+    @Override
+    public value_type getReturnType() {
+        // TODO Auto-generated method stub
+        return null;
     }
 }

@@ -37,6 +37,7 @@ public class opt_pool {
         pool_.put("isempty", new operate_isempty());
         pool_.put("return", new operate_return());
         pool_.put("export", new operate_export());
+        pool_.put("readlist", new operate_readlist());
     }
     static operator get(String opt_name){
         return pool_.get(opt_name);
