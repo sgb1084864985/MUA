@@ -7,6 +7,15 @@ public abstract class value{
     protected abstract void setValue(String val);
     public abstract value_type getValueType();
     public abstract value lightClone();
+    public String printString(){
+        return toString();
+    }
+}
+
+abstract class value_sequence extends value{
+    public abstract value get(int index);
+    public abstract int getSize();
+    public abstract value getSubSequence(int start,int end);
 }
 
 class value_void extends value{
@@ -59,11 +68,26 @@ class value_number extends value implements Comparable<value_number>{
     }
 }
 
-class value_word extends value implements Comparable<value_word>{
+class value_word extends value_sequence implements Comparable<value_word>{
     String val;
     @Override
     public String toString() {
         return val;
+    }
+
+    @Override
+    public value get(int index) {
+        return new value_word(val.substring(index,index+1));
+    }
+
+    @Override
+    public int getSize() {
+        return val.length();
+    }
+
+    @Override
+    public value getSubSequence(int start, int end) {
+        return new value_word(val.substring(start,end));
     }
 
     @Override
@@ -129,9 +153,17 @@ class value_bool extends value{
     }
 }
 
-class value_list extends value implements Iterable<value>{
-    ArrayList<value> elements = new ArrayList<>();
+class value_list extends value_sequence implements Iterable<value>{
+    ArrayList<value> elements;
     StackedNameSpace env=null;
+
+    value_list(){
+        elements = new ArrayList<>();
+    }
+
+    value_list(ArrayList<value> elements){
+        this.elements = elements;
+    }
 
     @Override
     public value lightClone() {
@@ -141,12 +173,27 @@ class value_list extends value implements Iterable<value>{
         return v;
     }
 
+    @Override
+    public int getSize() {
+        return size();
+    }
+
     public void add(value v){
         elements.add(v);
     }
 
+    @Override
     public value get(int index){
         return elements.get(index);
+    }
+
+    @Override
+    public value getSubSequence(int start, int end) {
+        ArrayList<value> subList = new ArrayList<>();
+        for(int i=start;i<end;i++){
+            subList.add(elements.get(i));
+        }
+        return new value_list(subList);
     }
 
     public boolean mayBeFunction(){
@@ -167,17 +214,25 @@ class value_list extends value implements Iterable<value>{
 
     @Override
     public String toString() {
+        return "["+printString()+"]";
+    }
+
+    @Override
+    public String printString() {
         StringBuilder string_builder=new StringBuilder();
-        string_builder.append("[ ");
         Iterator<value> it=elements.iterator();
         value v;
+        int i=0;
         while(it.hasNext()){
+            if(i>0) string_builder.append(' ');
+            i++;
+
             v=it.next();
-            string_builder.append(v.toString()+" ");
+            string_builder.append(v.toString());
         }
-        string_builder.append("]");
         return string_builder.toString();
     }
+    
     @Override
     public value_type getValueType() {
         return value_type.LIST;

@@ -1,18 +1,1 @@
-make "f1 [[x]
-    return [[y] [add :x :y]]
-]
-
-make "f2 [[x]
-    return f1 0
-]
-
-
-make "f1 [[x]
-    make "g [[y] [haha :x :y]]
-    return :g
-]
-
-make "f2 [[x]
-    make "g f1 0
-    return :g
-]
+print "bbbb

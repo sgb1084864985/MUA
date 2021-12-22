@@ -10,6 +10,10 @@ import java.util.ListIterator;
 public class StackedNameSpace implements NameSpace{
     LinkedList<HashMap<String,value>> namespaces=new LinkedList<>();
     static final int LIMITED_LEVEL=3;
+    public void clear(){
+        namespaces.clear();
+        addEmptySpace();
+    }
     public void addEmptySpace(){
         namespaces.add(new HashMap<>());
     }

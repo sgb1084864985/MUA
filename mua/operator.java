@@ -1,8 +1,12 @@
 package mua;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 // import java.util.HashMap;
 import java.util.List;
+import java.util.Scanner;
 
 public interface operator{
     value operate(token_stream paras,StackedNameSpace name_sets)throws mua_except;
@@ -33,6 +37,8 @@ public interface operator{
             if(val.getValueType()==type){
                 return val;
             }
+        }
+        for(value_type type:types_wanted){
             if(val instanceof value_word){
                 value_word word=(value_word)val;
                 if(type==value_type.NUMBER && word.canBeNumber()){
@@ -40,6 +46,16 @@ public interface operator{
                 }
                 else if(type==value_type.BOOL && word.canBeBool()){
                     return word.toBool();
+                }
+            }
+            if(type==value_type.WORD){
+                if(val instanceof value_bool){
+                    value_bool vBool=(value_bool) val;
+                    return new value_word(vBool.toString());
+                }
+                if(val instanceof value_number){
+                    value_number vNumber=(value_number) val;
+                    return new value_word(vNumber.toString());
                 }
             }
         }
@@ -95,7 +111,7 @@ class operator_print implements operator{
     @Override
     public value operate(token_stream paras,StackedNameSpace name_sets)throws mua_except {
         value val = operator.getOneValue(paras, name_sets, List.of(value_type.ALL_TYPE));
-        System.out.println(val);
+        System.out.println(val.printString());
         return val;
     }
     @Override
@@ -331,7 +347,8 @@ class operator_isname implements operator{
     public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
         value_word word = (value_word)operator.getOneValue(paras, name_sets, List.of(value_type.WORD));
         if(name_sets.contains(word.val)) return new value_bool(true);
-        return new value_bool(opt_pool.match(word.val));
+        // return new value_bool(opt_pool.match(word.val));
+        return new value_bool(false);
     }
     @Override
     public value_type getReturnType() {
@@ -353,6 +370,12 @@ abstract class operator_compare implements operator{
                 return ((value_word)a).compareTo((value_word)b);
             }
         }
+        if(a instanceof value_number && b instanceof value_word){
+            return ((value_number)a).compareTo(new value_number(b.toString()));
+        }
+        if(b instanceof value_number && a instanceof value_word){
+            return (new value_number(a.toString())).compareTo((value_number)b);
+        }
         throw new muaValueTypeMissMatch();
     }
     @Override
@@ -365,7 +388,12 @@ abstract class operator_compare implements operator{
 class operator_eq extends operator_compare{
     @Override
     public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
-        return new value_bool(compare(paras, name_sets) == 0);
+        try{
+            return new value_bool(compare(paras, name_sets) == 0);
+        }
+        catch(mua_except ex){
+            return new value_bool(false);
+        }
     }
 }
 
@@ -585,7 +613,262 @@ class operate_readlist implements operator{
 
     @Override
     public value_type getReturnType() {
-        // TODO Auto-generated method stub
-        return null;
+        return value_type.LIST;
+    }
+}
+
+class operator_word implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        ArrayList<value> value_list=
+            operator.getValues(paras, name_sets,List.of(value_type.WORD,value_type.WORD));
+        value_word w1=(value_word)value_list.get(0);
+        value_word w2=(value_word)value_list.get(1);
+        return new value_word(w1.val+w2.val);
+    }
+
+    @Override
+    public value_type getReturnType() {
+        return value_type.WORD;
+    }
+}
+
+class operator_sentence implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        ArrayList<value> vList=
+            operator.getValues(paras, name_sets,List.of(value_type.ALL_TYPE,value_type.ALL_TYPE));
+        value_list list = new value_list();
+        for(value v:vList){
+            if(v instanceof value_list){
+                value_list vl = (value_list) v;
+                for(value e:vl){
+                    list.add(e);
+                }
+            }
+            else{
+                list.add(v);
+            }
+        }
+        list.env=name_sets;
+        return list;
+    }
+
+    @Override
+    public value_type getReturnType() {
+        return value_type.LIST;
+    }
+}
+
+class operator_list implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        ArrayList<value> vList=
+            operator.getValues(paras, name_sets,List.of(value_type.ALL_TYPE,value_type.ALL_TYPE));
+        value_list list = new value_list();
+        for(value v:vList){
+            list.add(v);
+        }
+        list.env=name_sets;
+        return list;
+    }   
+    @Override
+    public value_type getReturnType() {
+        return value_type.LIST;
+    }
+}
+
+class operator_join implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        ArrayList<value> vList=
+            operator.getValues(paras, name_sets,List.of(value_type.LIST,value_type.ALL_TYPE));
+        value_list list = (value_list)vList.get(0).lightClone();
+        list.add(vList.get(1));
+        list.env=name_sets;
+        return list;
+    }   
+    @Override
+    public value_type getReturnType() {
+        return value_type.LIST;
+    }
+}
+
+abstract class operator_getByIndex implements operator{
+
+    void addEnvIfList(value v,StackedNameSpace namespace){
+        if(v instanceof value_list){
+            value_list vList=(value_list)v;
+            vList.env=namespace;
+        }
+    }
+
+    public value get(token_stream paras, StackedNameSpace name_sets,int index) throws mua_except {
+        value v=
+            operator.getOneValue(paras, name_sets,List.of(value_type.LIST,value_type.WORD));
+        value_sequence vs= (value_sequence) v;
+        if(index<0) index += vs.getSize();
+        value rslt=vs.get(index);
+        addEnvIfList(rslt, name_sets);
+        return rslt;
+    }
+
+    public value getSubSequence(token_stream paras, StackedNameSpace name_sets,int start,int end) throws mua_except {
+        value v=
+            operator.getOneValue(paras, name_sets,List.of(value_type.LIST,value_type.WORD));
+        value_sequence vs= (value_sequence) v;
+        if(end<0){
+            end+=vs.getSize()+1;
+        }
+        value rslt=vs.getSubSequence(start, end);
+        addEnvIfList(rslt, name_sets);
+        return rslt;
+    }
+
+    @Override
+    public value_type getReturnType() {
+        return value_type.LIST;
+    }
+}
+
+class operator_first extends operator_getByIndex{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        return get(paras, name_sets, 0);
+    }   
+}
+
+class operator_last extends operator_getByIndex{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        return get(paras, name_sets, -1);
+    }
+}
+
+class operator_butfirst extends operator_getByIndex{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        return getSubSequence(paras, name_sets, 1, -1);
+    }
+}
+
+class operator_butlast extends operator_getByIndex{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        return getSubSequence(paras, name_sets, 0, -2);
+    }
+}
+
+abstract class operator_unaryArithmetic implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        value_number v = (value_number) operator.getOneValue(paras, name_sets, List.of(value_type.NUMBER));
+        return new value_number(calculate(v.val));
+    }
+    @Override
+    public value_type getReturnType() {
+        return value_type.NUMBER;
+    }
+    public abstract double calculate(double num);
+}
+
+abstract class operator_unaryOperator implements operator{
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        value v = operator.getOneValue(paras, name_sets, List.of(getWantedType()));
+        return operate(v,name_sets);
+    }
+    public abstract value_type getWantedType();
+    public abstract value operate(value v, StackedNameSpace name_sets) throws mua_except;
+}
+
+class operator_save extends operator_unaryOperator{
+    @Override
+    public value_type getReturnType() {
+        return value_type.WORD;
+    }
+    @Override
+    public value_type getWantedType() {
+        return value_type.WORD;
+    }
+    @Override
+    public value operate(value v, StackedNameSpace name_sets) throws mua_except{
+        value_word fileWord = (value_word)v;
+        try{
+            PrintWriter writer = new PrintWriter(new File(fileWord.val));
+            name_sets.getFirstSpace().forEach(
+                (String name,value val)->{
+                    writer.print("make \""+name+" ");
+                    if(val instanceof value_word){
+                        writer.print("\"");
+                    }
+                    writer.println(val);
+                }
+            );
+            writer.close();
+        }
+        catch(FileNotFoundException ex){
+            System.out.println("file cannot open");
+        }
+        return v;
+    }
+}
+
+class operator_load extends operator_unaryOperator{
+    @Override
+    public value_type getReturnType() {
+        return value_type.WORD;
+    }
+    @Override
+    public value_type getWantedType() {
+        return value_type.WORD;
+    }
+    @Override
+    public value operate(value v, StackedNameSpace name_sets)throws mua_except{
+        value_word fileWord = (value_word)v;
+        try{
+            Scanner reader = new Scanner(new File(fileWord.val));
+            token_input_stream inputStream = new token_input_stream(reader);
+            hash_inter hi = new hash_inter();
+            hi.set(inputStream, name_sets);
+            hi.execute();
+        }
+        catch(FileNotFoundException ex){
+            System.out.println("file cannot open");
+        }
+        return v;
+    }
+}
+
+class operator_erall implements operator{
+    @Override
+    public value_type getReturnType() {
+        return value_type.BOOL;
+    }
+    @Override
+    public value operate(token_stream paras, StackedNameSpace name_sets) throws mua_except {
+        name_sets.clear();
+        return new value_bool(true);
+    }
+}
+
+class operator_random extends operator_unaryArithmetic{
+    @Override
+    public double calculate(double num) {
+        return Math.random()*num;
+    }
+}
+
+class operator_sqrt extends operator_unaryArithmetic{
+    @Override
+    public double calculate(double num) {
+        return Math.sqrt(num);
+    }
+}
+
+class operator_int extends operator_unaryArithmetic{
+    @Override
+    public double calculate(double num) {
+        return Math.floor(num);
     }
 }

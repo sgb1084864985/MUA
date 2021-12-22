@@ -38,6 +38,20 @@ public class opt_pool {
         pool_.put("return", new operate_return());
         pool_.put("export", new operate_export());
         pool_.put("readlist", new operate_readlist());
+        pool_.put("word", new operator_word());
+        pool_.put("sentence", new operator_sentence());
+        pool_.put("list", new operator_list());
+        pool_.put("join", new operator_join());
+        pool_.put("first", new operator_first());
+        pool_.put("last", new operator_first());
+        pool_.put("butfirst", new operator_butfirst());
+        pool_.put("butlast", new operator_butlast());
+        pool_.put("random", new operator_random());
+        pool_.put("int", new operator_int());
+        pool_.put("sqrt", new operator_sqrt());
+        pool_.put("save", new operator_save());
+        pool_.put("load", new operator_load());
+        pool_.put("erall", new operator_erall());
     }
     static operator get(String opt_name){
         return pool_.get(opt_name);
